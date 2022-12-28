@@ -8,44 +8,36 @@
 #
 
 library(shiny)
+library(readr)
+
+# We read the CSV
+df <- read_csv("data/mxmh_survey_results.csv")
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
 
     # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
-    )
+    titlePanel("Music Taste X Mental Problemitas"),
+    # Input for selecting the two variables to compare
+    selectInput(inputId = "var1", label = "Variable 1", choices = names(df)[sapply(df, is.numeric)]),
+    selectInput(inputId = "var2", label = "Variable 2", choices = names(df)[sapply(df, is.numeric)]),
+    
+    # Output for displaying the correlation between the selected variables
+    plotOutput(outputId = "corplot")
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
-    mxmh_survey_results <- read_csv("data/mxmh_survey_results.csv")
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
-    })
+  # Calculate the correlation between the selected variables
+  cor_val <- reactive({
+    cor(df[, input$var1], df[, input$var2])
+  })
+  
+  # Display the correlation in a plot
+  output$corplot <- renderPlot({
+    plot(df[, input$var1], df[, input$var2], main = paste("Correlation:", cor_val()))
+  })
 }
 
 # Run the application 
