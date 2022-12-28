@@ -35,6 +35,7 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
+    mxmh_survey_results <- read_csv("data/mxmh_survey_results.csv")
     output$distPlot <- renderPlot({
         # generate bins based on input$bins from ui.R
         x    <- faithful[, 2]
