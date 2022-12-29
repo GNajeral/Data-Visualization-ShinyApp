@@ -29,15 +29,28 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  # Calculate the correlation between the selected variables
-  cor_val <- reactive({
-    cor(df[, input$var1], df[, input$var2])
-  })
+  col1 <- reactive({ df[, input$var1] })
+  col2 <- reactive({ df[, input$var2] })
   
-  # Display the correlation in a plot
-  output$corplot <- renderPlot({
-    plot(df[, input$var1], df[, input$var2], main = paste("Correlation:", cor_val()))
-  })
+  # Remove rows with missing values
+  col1 <- reactive({ col1[!is.na(col1)] })
+  col2 <- reactive({ col2[!is.na(col2)] })
+  
+  print("pollon")
+  print(class(col1))
+  print(col1)
+  
+  if(is.numeric(col1) && is.numeric(col2)){
+    # Calculate the correlation between the selected variables
+    cor_val <- reactive({
+      cor(col1, col2)
+    })
+    
+    # Display the correlation in a plot
+    output$corplot <- renderPlot({
+      plot(col1, col2, main = paste("Correlation:", cor_val()))
+    })
+  }
 }
 
 # Run the application 
