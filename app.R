@@ -19,13 +19,16 @@ ui <- fluidPage(
 
     # Application title
     titlePanel("Music Taste X Mental Problemitas"),
+    tags$h3("Correlation between numeric variables"),
+    tags$h4("Choose the variables you wish to study"),
     # Input for selecting the two variables to compare
     selectInput(inputId = "var1", label = "Variable 1", choices = names(df)[sapply(df, is.numeric)]),
     selectInput(inputId = "var2", label = "Variable 2", choices = names(df)[sapply(df, is.numeric)]),
     actionButton("button1", "Submit"),
     
     # Output for displaying the correlation between the selected variables
-    plotOutput(outputId = "corplot")
+    # plotOutput(outputId = "corplot")
+    tags$div(style = "margin-top: 20px", textOutput("correlation"))
 )
 
 # Define server logic required to draw a histogram
@@ -42,10 +45,15 @@ server <- function(input, output) {
     cor_val <- cor(df[, input$var1], df[, input$var2])
     print(cor_val)
 
-    # Display the correlation in a plot
-    print("Plotting correlations")
-    output$corplot <- renderPlot({
-      plot(df[, input$var1], df[, input$var2])
+    # # Display the correlation in a plot
+    # print("Plotting correlations")
+    # output$corplot <- renderPlot({
+    #   plot(df[, input$var1], df[, input$var2])
+    # })
+    
+    output$correlation <- renderText({
+      # Return the value as a character string
+      return(paste("Correlation between", input$var1, "and", input$var2, ":", as.character(cor_val)))
     })
     
   })
