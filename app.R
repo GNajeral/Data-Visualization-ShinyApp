@@ -22,6 +22,7 @@ ui <- fluidPage(
     # Input for selecting the two variables to compare
     selectInput(inputId = "var1", label = "Variable 1", choices = names(df)[sapply(df, is.numeric)]),
     selectInput(inputId = "var2", label = "Variable 2", choices = names(df)[sapply(df, is.numeric)]),
+    actionButton("button1", "Submit"),
     
     # Output for displaying the correlation between the selected variables
     plotOutput(outputId = "corplot")
@@ -29,28 +30,25 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  col1 <- reactive({ df[, input$var1] })
-  col2 <- reactive({ df[, input$var2] })
   
-  # Remove rows with missing values
-  col1 <- reactive({ col1[!is.na(col1)] })
-  col2 <- reactive({ col2[!is.na(col2)] })
+  observeEvent(input$button1, {
   
-  print("pollon")
-  print(class(col1))
-  print(col1)
-  
-  if(is.numeric(col1) && is.numeric(col2)){
+    # Remove these rows from the data frame
+    print("Removing empty rows")
+    df <- df[rowSums(is.na(df)) == 0,]
+    
     # Calculate the correlation between the selected variables
-    cor_val <- reactive({
-      cor(col1, col2)
+    print("Calculating correlation")
+    cor_val <- cor(df[, input$var1], df[, input$var2])
+    print(cor_val)
+
+    # Display the correlation in a plot
+    print("Plotting correlations")
+    output$corplot <- renderPlot({
+      plot(df[, input$var1], df[, input$var2])
     })
     
-    # Display the correlation in a plot
-    output$corplot <- renderPlot({
-      plot(col1, col2, main = paste("Correlation:", cor_val()))
-    })
-  }
+  })
 }
 
 # Run the application 
