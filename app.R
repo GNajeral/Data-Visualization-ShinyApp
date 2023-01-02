@@ -9,6 +9,7 @@
 
 library(shiny)
 library(readr)
+library(caret)
 
 # We read the CSV
 df <- read_csv("data/mxmh_survey_results.csv")
@@ -22,8 +23,8 @@ ui <- fluidPage(
     tags$h3("Correlation between numeric variables"),
     tags$h4("Choose the variables you wish to study"),
     # Input for selecting the two variables to compare
-    selectInput(inputId = "var1", label = "Variable 1", choices = names(df)[sapply(df, is.numeric)]),
-    selectInput(inputId = "var2", label = "Variable 2", choices = names(df)[sapply(df, is.numeric)]),
+    selectInput(inputId = "var1", label = "Variable 1", choices = names(df)),
+    selectInput(inputId = "var2", label = "Variable 2", choices = names(df)),
     actionButton("button1", "Submit"),
     
     # Output for displaying the correlation between the selected variables
@@ -39,10 +40,34 @@ server <- function(input, output) {
     # Remove these rows from the data frame
     print("Removing empty rows")
     df <- df[rowSums(is.na(df)) == 0,]
+    col1 <- df[, input$var1]
+    col2 <- df[, input$var2]
+    
+    
+    # if(!is.numeric(df[, input$var1])){
+    #   print("OneHotEncoding col1...")
+    #   # Now, create the one-hot encoder object
+    #   encoder <- OneHotEncoder(cols = input$var1)
+    #   # Fit the encoder to the data
+    #   encoder <- fit(encoder, data)
+    #   # Transform the data using the encoder
+    #   col1 <- transform(encoder, data)
+    # }
+    # 
+    # if(!is.numeric(df[, input$var2])){
+    #   print("OneHotEncoding col2...")
+    #   # Now, create the one-hot encoder object
+    #   encoder <- OneHotEncoder(cols = input$var2)
+    #   # Fit the encoder to the data
+    #   encoder <- fit(encoder, data)
+    #   # Transform the data using the encoder
+    #   col2 <- transform(encoder, data)
+    # }
+    
     
     # Calculate the correlation between the selected variables
     print("Calculating correlation")
-    cor_val <- cor(df[, input$var1], df[, input$var2])
+    cor_val <- cor(col1, col2)
     print(cor_val)
 
     # # Display the correlation in a plot
