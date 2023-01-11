@@ -13,7 +13,14 @@ library(caret)
 library(mltools)
 library(data.table)
 library(ggplot2)
-library(ggstream)
+library(reshape2)
+library(plyr)
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+library(plotly)
+library(heatmaply)
+library(dplyr)
 
 
 # We read the CSV
@@ -23,40 +30,63 @@ df <- read_csv("data/mxmh_survey_results.csv")
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   
-  # Application title
-  titlePanel("Music Taste X Mental Health"),
-  tags$h3("Correlation between numeric variables"),
-  tags$h4("Choose the variables you wish to study"),
+  navbarPage("Music X Mental Health",
+             id="tabs", 
   
-  # Input for selecting the two variables to compare
-  selectInput(inputId = "var1", label = "Variable 1", choices = names(df)),
-  selectInput(inputId = "var2", label = "Variable 2", choices = names(df)),
-  #selectInput(inputId = "var1", label = "Variable 1 (time)", choices = names(df)),
-  #selectInput(inputId = "var2", label = "Variable 2 (flow)", choices = names(df)),
-  selectInput(inputId = "var3", label = "Variable 3", choices = names(df)),
-  actionButton("button1", "Submit"),
-  
-  # Output for displaying the correlation between the selected variables
-  tags$div(style = "margin-top: 20px", textOutput("correlation")),
-  tags$div(style = "margin-top: 20px", plotOutput("corplot")),
-  
-  # Output for displaying the streamgraph
-  actionButton("create_streamgraph", "Create Streamgraph"),
-  plotOutput("streamgraph")
-  
+  tabPanel("Correlations",
+           pageWithSidebar(
+             headerPanel('Relationships between two variables'),
+             sidebarPanel(
+               tags$h3("Correlation between numeric variables"),
+               tags$h4("Choose the variables you wish to study"),
+               # Input for selecting the two variables to compare
+               selectInput(inputId = "var1", label = "Variable 1", choices = names(df)),
+               selectInput(inputId = "var2", label = "Variable 2", choices = names(df)),
+               actionButton("button1", "Submit")
+             ),
+             mainPanel(
+               # Output for displaying the correlation between the selected variables
+               tags$div(style = "margin-top: 20px", textOutput("correlation")),
+               tags$div(style = "margin-top: 20px", plotlyOutput("corplot")),
+             )
+           )
+  ),
+  tabPanel("HeatMap",
+           pageWithSidebar(
+             headerPanel('Relationships between two variables'),
+             sidebarPanel(
+               checkboxInput('check', "Create Heatmap with favorite genre and different mental illnesses"),
+               conditionalPanel(
+                 condition = "input.check == false",
+                 # Input for selecting the two variables to compare
+                 selectInput(inputId = "var3", label = "Categorical Variable", choices = names(df)[!sapply(df, is.numeric)]),
+                 selectInput(inputId = "var4", label = "Variable to aggregate 1", choices = names(df)[sapply(df, is.numeric)]),
+                 selectInput(inputId = "var5", label = "Variable to aggregate 2", choices = names(df)[sapply(df, is.numeric)]),
+                 selectInput(inputId = "var6", label = "Variable to aggregate 3", choices = names(df)[sapply(df, is.numeric)]),
+                 selectInput(inputId = "var7", label = "Variable to aggregate 4", choices = names(df)[sapply(df, is.numeric)]),
+               ),
+               actionButton("button2", "Submit")
+             ),
+             mainPanel(
+               # Output for displaying the heatmap of the selected aggregated variables
+               tags$div(style = "width:100%; height:100%;", plotlyOutput("heatmap"))
+             )
+           )
+        )
+    )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
   
+  # Remove empty rows from the data frame
+  print("Removing empty rows")
+  df <- df[rowSums(is.na(df)) == 0,]
+  
   observeEvent(input$button1, {
-    
-    # Remove empty rows from the data frame
-    print("Removing empty rows")
-    df <- df[rowSums(is.na(df)) == 0,]
     col1 <- df[, input$var1]
     col2 <- df[, input$var2]
-
+    
     print(is.numeric(as.data.frame(col1)[[1]]))
     print(is.numeric(as.data.frame(col2)[[1]]))
     print(class(as.data.frame(col1)[[1]]))
@@ -65,14 +95,14 @@ server <- function(input, output) {
     
     if(!is.numeric(as.data.frame(col1)[[1]]) && is.numeric(as.data.frame(col2)[[1]])){
       print("Boxplot of col2 grouped by col1")
-      output$corplot <- renderPlot({
+      output$corplot <- renderPlotly({
         boxplot(unlist(col2) ~ unlist(col1), xlab = input$var1, ylab = input$var2, main = paste("Boxplot of", input$var2, "grouped by", input$var1))
       })
     }
     
     if(!is.numeric(as.data.frame(col2)[[1]]) && is.numeric(as.data.frame(col1)[[1]])){
       print("Boxplot of col1 grouped by col2")
-      output$corplot <- renderPlot({
+      output$corplot <- renderPlotly({
         boxplot(unlist(col1) ~ unlist(col2), xlab = input$var2, ylab = input$var1, main = paste("Boxplot of", input$var1, "grouped by", input$var2))
       })
     }
@@ -87,44 +117,37 @@ server <- function(input, output) {
         # Return the value as a character string
         return(paste("Correlation between", input$var1, "and", input$var2, ":", as.character(cor_val)))
       })
-      output$corplot <- renderPlot({
+      output$corplot <- renderPlotly({
         print("Scatter plot of col1 vs col2")
         ggplot(data = df, aes(x = unlist(col1), y = unlist(col2))) +
           geom_point() +
           labs(title = "Scatter plot of col1 vs col2", x = input$var1,  y = input$var2)
       })
     }
-    
-  })
-  
-  observeEvent(input$create_streamgraph, {
-    
-    # Remove empty rows from the data frame
-    print("Removing empty rows")
-    df <- df[rowSums(is.na(df)) == 0,]
-    col1 <- df[, input$var1]
-    col2 <- df[, input$var2]
-    col3 <- df[, input$var3]
-    
-    print(is.numeric(as.data.frame(col1)[[1]]))
-    print(is.numeric(as.data.frame(col2)[[1]]))
-    print(is.numeric(as.data.frame(col3)[[1]]))
-    print(class(as.data.frame(col1)[[1]]))
-    print(class(as.data.frame(col2)[[1]]))
-    print(class(as.data.frame(col3)[[1]]))
-    
-    if(is.numeric(as.data.frame(col1)[[1]]) && is.numeric(as.data.frame(col2)[[1]]) && !is.numeric(as.data.frame(col3)[[1]])){
-      # Create a streamgraph
-      output$streamgraph <- renderPlot({
-        print("Creating a streamgraph")
-        ggplot(data = df, aes(x = unlist(col1), y = unlist(col2), fill = unlist(col3))) +
-          geom_stream() +
-          labs(title = "Streamgraph of col2 over col1", x = input$var1,  y = input$var2)
+  }
+  )
+  observeEvent(input$button2, {
+    if(isTRUE(input$check)){
+      df2 <- df %>% select("Fav genre", "Anxiety", "Depression", "Insomnia", "OCD")
+      print("Aggregating variables")
+      df_agg <- aggregate(cbind(Anxiety, Depression, Insomnia, OCD) ~ `Fav genre`, df2, sum)
+      print("Heatmap")
+      output$heatmap <- renderPlotly({
+        heatmaply(df_agg)
       })
-      print("Done")
-      # output$streamgraph <- renderPlot({
-      #   streamgraph(data, x = input$var1, y = input$var2, group = input$var3, type = "normalized", main = paste("Streamgraph of", input$var2, "over", input$var1))
-      # })
+    }
+    else{
+      df2 <- df %>% select(input$var3, input$var4, input$var5, input$var6, input$var7)
+      col_labels <- c(input$var4, input$var5, input$var6, input$var7)
+      print(input$var3)
+      print(input$var4)
+      print("Aggregating selected variables")
+      df_agg <- aggregate(cbind(unlist(df2[,input$var4]), unlist(df2[,input$var5]), unlist(df2[,input$var6]), unlist(df2[,input$var7])) ~ unlist(df2[,input$var3]), df2, sum)
+      colnames(df_agg)[1] <- input$var3
+      print("Heatmap")
+      output$heatmap <- renderPlotly({
+        heatmaply(df_agg, labCol = col_labels)
+      })
     }
     
   })
