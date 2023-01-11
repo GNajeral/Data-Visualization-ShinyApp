@@ -10,6 +10,11 @@
 library(shiny)
 library(readr)
 library(caret)
+library(mltools)
+library(data.table)
+library(ggplot2)
+library(streamgraph)
+
 
 # We read the CSV
 df <- read_csv("data/mxmh_survey_results.csv")
@@ -28,8 +33,8 @@ ui <- fluidPage(
     actionButton("button1", "Submit"),
     
     # Output for displaying the correlation between the selected variables
-    # plotOutput(outputId = "corplot")
-    tags$div(style = "margin-top: 20px", textOutput("correlation"))
+    tags$div(style = "margin-top: 20px", textOutput("correlation")),
+    tags$div(style = "margin-top: 20px", plotOutput("corplot"))
 )
 
 # Define server logic required to draw a histogram
@@ -37,50 +42,48 @@ server <- function(input, output) {
   
   observeEvent(input$button1, {
   
-    # Remove these rows from the data frame
+    # Remove empty rows from the data frame
     print("Removing empty rows")
     df <- df[rowSums(is.na(df)) == 0,]
     col1 <- df[, input$var1]
     col2 <- df[, input$var2]
     
+    print(is.numeric(as.data.frame(col1)[[1]]))
+    print(is.numeric(as.data.frame(col2)[[1]]))
+    print(class(as.data.frame(col1)[[1]]))
+    print(class(as.data.frame(col2)[[1]]))
     
-    # if(!is.numeric(df[, input$var1])){
-    #   print("OneHotEncoding col1...")
-    #   # Now, create the one-hot encoder object
-    #   encoder <- OneHotEncoder(cols = input$var1)
-    #   # Fit the encoder to the data
-    #   encoder <- fit(encoder, data)
-    #   # Transform the data using the encoder
-    #   col1 <- transform(encoder, data)
-    # }
-    # 
-    # if(!is.numeric(df[, input$var2])){
-    #   print("OneHotEncoding col2...")
-    #   # Now, create the one-hot encoder object
-    #   encoder <- OneHotEncoder(cols = input$var2)
-    #   # Fit the encoder to the data
-    #   encoder <- fit(encoder, data)
-    #   # Transform the data using the encoder
-    #   col2 <- transform(encoder, data)
-    # }
+   
+    if(!is.numeric(as.data.frame(col1)[[1]]) && is.numeric(as.data.frame(col2)[[1]])){
+      print("Boxplot of col2 grouped by col1")
+      output$corplot <- renderPlot({
+        boxplot(unlist(col2) ~ unlist(col1), xlab = input$var1, ylab = input$var2, main = paste("Boxplot of", input$var2, "grouped by", input$var1))
+      })
+    }
     
-    
-    # Calculate the correlation between the selected variables
-    print("Calculating correlation")
-    cor_val <- cor(col1, col2)
-    print(cor_val)
-
-    # # Display the correlation in a plot
-    # print("Plotting correlations")
-    # output$corplot <- renderPlot({
-    #   plot(df[, input$var1], df[, input$var2])
-    # })
-    
-    output$correlation <- renderText({
-      # Return the value as a character string
-      return(paste("Correlation between", input$var1, "and", input$var2, ":", as.character(cor_val)))
-    })
-    
+    if(!is.numeric(as.data.frame(col2)[[1]]) && is.numeric(as.data.frame(col1)[[1]])){
+      print("Boxplot of col1 grouped by col2")
+      output$corplot <- renderPlot({
+        boxplot(unlist(col1) ~ unlist(col2), xlab = input$var2, ylab = input$var1, main = paste("Boxplot of", input$var1, "grouped by", input$var2))
+      })
+    }
+  
+    if(is.numeric(as.data.frame(col1)[[1]]) && is.numeric(as.data.frame(col2)[[1]])){
+      # Calculate the correlation between the selected variables
+      print("Calculating correlation")
+      cor_val <- cor(col1, col2)
+      print(cor_val)
+      print("Correlation between col1 and col2")
+      output$correlation <- renderText({
+        # Return the value as a character string
+        return(paste("Correlation between", input$var1, "and", input$var2, ":", as.character(cor_val)))
+      })
+      output$corplot <- renderPlot({
+        ggplot(data = df, aes(x = unlist(col1), y = unlist(col2))) +
+          geom_point() +
+          labs(title = "Scatter plot of col1 vs col2", x = input$var1, y = input$var2)
+      })
+    }
   })
 }
 
