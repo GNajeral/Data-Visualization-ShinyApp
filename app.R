@@ -21,6 +21,7 @@ library(viridis)
 library(plotly)
 library(heatmaply)
 library(dplyr)
+library(tidyr)
 
 
 # We read the CSV
@@ -31,49 +32,72 @@ df <- read_csv("data/mxmh_survey_results.csv")
 ui <- fluidPage(
   
   navbarPage("Music X Mental Health",
-             id="tabs", 
-  
-  tabPanel("Correlations",
-           pageWithSidebar(
-             headerPanel('Relationships between two variables'),
-             sidebarPanel(
-               tags$h3("Correlation between numeric variables"),
-               tags$h4("Choose the variables you wish to study"),
-               # Input for selecting the two variables to compare
-               selectInput(inputId = "var1", label = "Variable 1", choices = names(df)),
-               selectInput(inputId = "var2", label = "Variable 2", choices = names(df)),
-               actionButton("button1", "Submit")
-             ),
-             mainPanel(
-               # Output for displaying the correlation between the selected variables
-               tags$div(style = "margin-top: 20px", textOutput("correlation")),
-               tags$div(style = "margin-top: 20px", plotlyOutput("corplot")),
-             )
-           )
-  ),
-  tabPanel("HeatMap",
-           pageWithSidebar(
-             headerPanel('Relationships between two variables'),
-             sidebarPanel(
-               checkboxInput('check', "Create Heatmap with favorite genre and different mental illnesses"),
-               conditionalPanel(
-                 condition = "input.check == false",
+             id="tabs",
+             
+    tabPanel("Correlations",
+             pageWithSidebar(
+               headerPanel("Relationships between two variables"),
+               sidebarPanel(
+                 tags$h3("Correlation between numeric variables"),
+                 tags$h4("Choose the variables you wish to study"),
                  # Input for selecting the two variables to compare
-                 selectInput(inputId = "var3", label = "Categorical Variable", choices = names(df)[!sapply(df, is.numeric)]),
-                 selectInput(inputId = "var4", label = "Variable to aggregate 1", choices = names(df)[sapply(df, is.numeric)]),
-                 selectInput(inputId = "var5", label = "Variable to aggregate 2", choices = names(df)[sapply(df, is.numeric)]),
-                 selectInput(inputId = "var6", label = "Variable to aggregate 3", choices = names(df)[sapply(df, is.numeric)]),
-                 selectInput(inputId = "var7", label = "Variable to aggregate 4", choices = names(df)[sapply(df, is.numeric)]),
+                 selectInput(inputId = "var1", label = "Variable 1", choices = names(df)),
+                 selectInput(inputId = "var2", label = "Variable 2", choices = names(df)),
+                 actionButton("button1", "Submit")
                ),
-               actionButton("button2", "Submit")
-             ),
-             mainPanel(
-               # Output for displaying the heatmap of the selected aggregated variables
-               tags$div(style = "width:100%; height:100%;", plotlyOutput("heatmap"))
+               mainPanel(
+                 # Output for displaying the correlation between the selected variables
+                 tags$div(style = "margin-top: 20px", textOutput("correlation")),
+                 tags$div(style = "margin-top: 20px", plotlyOutput("corplot")),
+               )
              )
-           )
-        )
+    ),
+    
+    tabPanel("HeatMap",
+             pageWithSidebar(
+               headerPanel("Relationships between two variables"),
+               sidebarPanel(
+                 checkboxInput("check", "Create Heatmap with favorite genre and different mental illnesses"),
+                 conditionalPanel(
+                   condition = "input.check == false",
+                   # Input for selecting the two variables to compare
+                   selectInput(inputId = "var3", label = "Categorical Variable", choices = names(df)[!sapply(df, is.numeric)]),
+                   selectInput(inputId = "var4", label = "Variable to aggregate 1", choices = names(df)[sapply(df, is.numeric)]),
+                   selectInput(inputId = "var5", label = "Variable to aggregate 2", choices = names(df)[sapply(df, is.numeric)]),
+                   selectInput(inputId = "var6", label = "Variable to aggregate 3", choices = names(df)[sapply(df, is.numeric)]),
+                   selectInput(inputId = "var7", label = "Variable to aggregate 4", choices = names(df)[sapply(df, is.numeric)]),
+                 ),
+                 actionButton("button2", "Submit")
+               ),
+               mainPanel(
+                 # Output for displaying the heatmap of the selected aggregated variables
+                 tags$div(style = "width:100%; height:100%;", plotlyOutput("heatmap"))
+               )
+             )
+    ),
+    
+    tabPanel("LineChart",
+             pageWithSidebar(
+               headerPanel("Evolution of mental illnesses based on subject\'s age"),
+               sidebarPanel(
+                 # numericInput("numOption", h3("Numeric input"), mix = 1, max = 4, value = 1),
+                 # conditionalPanel(
+                 #   condition = "input.check == false",
+                 #   # Input for selecting the two variables to compare
+                 #   selectInput(inputId = "var8", label = "Variable to aggregate 1", choices = names(df)[sapply(df, is.numeric)]),
+                 #   selectInput(inputId = "var9", label = "Variable to aggregate 2", choices = names(df)[sapply(df, is.numeric)]),
+                 #   selectInput(inputId = "var10", label = "Variable to aggregate 3", choices = names(df)[sapply(df, is.numeric)]),
+                 #   selectInput(inputId = "var11", label = "Variable to aggregate 4", choices = names(df)[sapply(df, is.numeric)]),
+                 # ),
+                 actionButton("button3", "Submit")
+               ),
+               mainPanel(
+                 # Output for displaying the line chart of the selected variables
+                 tags$div(style = "width:100%; height:100%;", plotlyOutput("plotIllness"))
+               )
+             )
     )
+  )
 )
 
 # Define server logic required to draw a histogram
@@ -124,8 +148,8 @@ server <- function(input, output) {
           labs(title = "Scatter plot of col1 vs col2", x = input$var1,  y = input$var2)
       })
     }
-  }
-  )
+  })
+  
   observeEvent(input$button2, {
     if(isTRUE(input$check)){
       df2 <- df %>% select("Fav genre", "Anxiety", "Depression", "Insomnia", "OCD")
@@ -149,7 +173,35 @@ server <- function(input, output) {
         heatmaply(df_agg, labCol = col_labels)
       })
     }
+  })
+  
+  observeEvent(input$button3, {
+    df3 <- df %>%
+      group_by(Age) %>%
+      summarize(Anxiety = mean(Anxiety),
+                Depression = mean(Depression),
+                Insomnia = mean(Insomnia),
+                OCD = mean(OCD))
     
+    output$plotIllness <- renderPlotly({
+      print("Line Chart mental illnesses vs age")
+      plot_ly(df3, x = ~Age, y = ~Anxiety, name = "Anxiety",
+              type = "scatter", mode = "lines+markers",
+              line = list(width = 2, dash = "solid", color = "blue")) %>%
+        add_trace(x = ~Age, y = ~Depression, name = "Depression",
+                  type = "scatter", mode = "lines+markers",
+                  line = list(width = 2, dash = "solid", color = "red")) %>%
+        add_trace(x = ~Age, y = ~Insomnia, name = "Insomnia",
+                  type = "scatter", mode = "lines+markers",
+                  line = list(width = 2, dash = "solid", color = "yellow")) %>%
+        add_trace(x = ~Age, y = ~OCD, name = "OCD",
+                  type = "scatter", mode = "lines+markers",
+                  line = list(width = 2, dash = "solid", color = "green")) %>%
+        layout(title = "Line Chart",
+               xaxis = list(title = "Age"),
+               yaxis = list(title = "Illness Mean Degree")
+        )
+    })
   })
 }
 
