@@ -22,6 +22,7 @@ library(plotly)
 library(heatmaply)
 library(dplyr)
 library(tidyr)
+library(rsconnect)
 
 
 # We read the CSV
