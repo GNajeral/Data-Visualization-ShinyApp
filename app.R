@@ -51,12 +51,42 @@ ui <- fluidPage(
                )
              )
     ),
+    
+    tabPanel("BarChart",
+             pageWithSidebar(
+               headerPanel("Relationships between Mental Illnesses and subject\'s age and hours spent"),
+               tags$div(style = "margin-top: 20px", sidebarPanel(
+                 checkboxGroupInput("varsBarChart", "Mental Illnesses to be seen in the bar chart:",
+                                    c("Anxiety" = "Anxiety", "Depression" = "Depression", "Insomnia" = "Insomnia", "OCD" = "OCD"),
+                                    selected = c("Anxiety")))
+               ),
+               mainPanel(
+                 # Output for displaying the bar chart of the selected variables
+                 plotOutput("plotBarChart")
+               )
+             )
+    ),
 
+    tabPanel("LineChart",
+             pageWithSidebar(
+               headerPanel("Evolution of Mental Illnesses based on subject\'s age"),
+               tags$div(style = "margin-top: 20px", sidebarPanel(
+                 checkboxGroupInput("varsLineChart", "Mental Illnesses to include in the evolution line chart:",
+                                    c("Anxiety" = "Anxiety", "Depression" = "Depression", "Insomnia" = "Insomnia", "OCD" = "OCD"),
+                                    selected = c("Anxiety")))
+               ),
+              mainPanel(
+                # Output for displaying the line chart of the selected variables
+                plotOutput("plotLineChart")
+              )
+             )
+    ),
+    
     tabPanel("HeatMap",
              pageWithSidebar(
                headerPanel("Relationships between two variables"),
                tags$div(style = "margin-top: 20px", sidebarPanel(
-                 checkboxInput("check", "Create Heatmap with Favorite Genre and Different Mental Illnesses"),
+                 checkboxInput("check", "Create Heatmap with Favorite Genre and different Mental Illnesses"),
                  conditionalPanel(
                    condition = "input.check == false",
                    # Input for selecting the two variables to compare
@@ -66,27 +96,12 @@ ui <- fluidPage(
                    selectInput(inputId = "var6", label = "Variable to aggregate 3", choices = names(df)[sapply(df, is.numeric)]),
                    selectInput(inputId = "var7", label = "Variable to aggregate 4", choices = names(df)[sapply(df, is.numeric)]),
                  ),
-                 actionButton("button2", "Submit")
+                 actionButton("button3", "Submit")
                )),
                mainPanel(
                  # Output for displaying the heatmap of the selected aggregated variables
                  tags$div(style = "width:100%; height:100%;", plotlyOutput("heatmap"))
                )
-             )
-    ),
-
-    tabPanel("LineChart",
-             pageWithSidebar(
-               headerPanel("Evolution of mental illnesses based on subject\'s age"),
-               tags$div(style = "margin-top: 20px", sidebarPanel(
-                 checkboxGroupInput("vars", "Variables to include:",
-                                    c("Anxiety" = "Anxiety", "Depression" = "Depression", "Insomnia" = "Insomnia", "OCD" = "OCD"),
-                                    selected = c("Anxiety")))
-               ),
-              mainPanel(
-                # Output for displaying the line chart of the selected variables
-                plotOutput("plotIllness")
-              )
              )
     )
   )
@@ -142,8 +157,62 @@ server <- function(input, output) {
       })
     }
   })
-
-  observeEvent(input$button2, {
+  
+  
+  observeEvent(input$varsBarChart, {
+    
+    filtered_data <- reactive({
+      df[, c("Fav genre", input$varsLineChart)]
+    })
+    
+    output$plotBarChart <- renderPlot({
+      ggplot(df, aes(x = `Fav genre`, y = Anxiety)) +
+        geom_bar(stat = "identity", fill = "blue") +
+        ggtitle("Mental Illnesses by Fav genre") +
+        xlab("Fav genre") +
+        ylab("Count")
+    })
+      
+    # filtered_data <- reactive({
+    #   selected_illnesses <- input$varsBarChart
+    #   df %>% filter(Anxiety %in% selected_illnesses | Depression %in% selected_illnesses | Insomnia %in% selected_illnesses | OCD %in% selected_illnesses)
+    # })
+    # 
+    # output$plotBarChart <- renderPlot({
+    #   ggplot(filtered_data(), aes(x = `Fav genre`, y = count)) +
+    #     geom_bar(stat = "identity", fill = "blue") +
+    #     ggtitle("Mental Illnesses by Fav genre") +
+    #     xlab("Fav genre") +
+    #     ylab("Count")
+    # })
+    
+  })
+  
+  observeEvent(input$varsLineChart, {
+    
+    df_mean <- df %>%
+      group_by(Age) %>%
+      summarise(Anxiety = mean(Anxiety),
+                Depression = mean(Depression),
+                Insomnia = mean(Insomnia),
+                OCD = mean(OCD))
+    
+    filtered_data <- reactive({
+      df_mean[, c("Age", input$varsLineChart)]
+    })
+    filtered_data_long <- filtered_data() %>% 
+      select(Age, input$varsLineChart) %>% 
+      gather(key = "Legend", value = "Computed Illness Degree", -Age)
+    
+    output$plotLineChart <- renderPlot({
+      ggplot(filtered_data_long, aes(x = Age, y = `Computed Illness Degree`, color = Legend)) +
+        geom_line(size = 1.5) + geom_point(size = 2.5) + stat_summary(fun.y = mean, geom = "line", aes(group = 1))
+    })
+    
+  })
+  
+  
+  observeEvent(input$button3, {
     if(isTRUE(input$check)){
       df2 <- df %>% select("Fav genre", "Anxiety", "Depression", "Insomnia", "OCD")
       print("Aggregating variables")
@@ -166,30 +235,6 @@ server <- function(input, output) {
         heatmaply(df_agg, labCol = col_labels)
       })
     }
-  })
-
-  # Update the chart when the check box inputs change
-  observeEvent(input$vars, {
-    
-    df_mean <- df %>%
-      group_by(Age) %>%
-      summarise(Anxiety = mean(Anxiety),
-                Depression = mean(Depression),
-                Insomnia = mean(Insomnia),
-                OCD = mean(OCD))
-    
-    filtered_data <- reactive({
-      df_mean[, c("Age", input$vars)]
-    })
-    filtered_data_long <- filtered_data() %>% 
-      select(Age, input$vars) %>% 
-      gather(key = "Legend", value = "Computed Illness Degree", -Age)
-    
-    output$plotIllness <- renderPlot({
-      ggplot(filtered_data_long, aes(x = Age, y = `Computed Illness Degree`, color = Legend)) +
-        geom_line(size = 1.5) + geom_point(size = 2.5) + stat_summary(fun.y = mean, geom = "line", aes(group = 1))
-    })
-    
   })
 }
 
