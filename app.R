@@ -36,14 +36,14 @@ ui <- fluidPage(
     tabPanel("Correlations",
              pageWithSidebar(
                headerPanel("Relationships between two variables"),
-               sidebarPanel(
+               tags$div(style = "margin-top: 20px", sidebarPanel(
                  tags$h3("Correlation between numeric variables"),
                  tags$h4("Choose the variables you wish to study"),
                  # Input for selecting the two variables to compare
                  selectInput(inputId = "var1", label = "Variable 1", choices = names(df)),
                  selectInput(inputId = "var2", label = "Variable 2", choices = names(df)),
                  actionButton("button1", "Submit")
-               ),
+               )),
                mainPanel(
                  # Output for displaying the correlation between the selected variables
                  tags$div(style = "margin-top: 20px", textOutput("correlation")),
@@ -55,7 +55,7 @@ ui <- fluidPage(
     tabPanel("HeatMap",
              pageWithSidebar(
                headerPanel("Relationships between two variables"),
-               sidebarPanel(
+               tags$div(style = "margin-top: 20px", sidebarPanel(
                  checkboxInput("check", "Create Heatmap with favorite genre and different mental illnesses"),
                  conditionalPanel(
                    condition = "input.check == false",
@@ -67,7 +67,7 @@ ui <- fluidPage(
                    selectInput(inputId = "var7", label = "Variable to aggregate 4", choices = names(df)[sapply(df, is.numeric)]),
                  ),
                  actionButton("button2", "Submit")
-               ),
+               )),
                mainPanel(
                  # Output for displaying the heatmap of the selected aggregated variables
                  tags$div(style = "width:100%; height:100%;", plotlyOutput("heatmap"))
@@ -78,18 +78,14 @@ ui <- fluidPage(
     tabPanel("LineChart",
              pageWithSidebar(
                headerPanel("Evolution of mental illnesses based on subject\'s age"),
-               sidebarPanel(
+               tags$div(style = "margin-top: 20px", sidebarPanel(
                  checkboxGroupInput("vars", "Variables to include:",
                                     c("Anxiety" = "Anxiety", "Depression" = "Depression", "Insomnia" = "Insomnia", "OCD" = "OCD"),
-                                    selected = c("Anxiety")),
-                 # checkboxInput("plotAnxiety", "Plot Anxiety illness"),
-                 # checkboxInput("plotDepression", "Plot Depression illness"),
-                 # checkboxInput("plotInsomnia", "Plot Insomnia illness"),
-                 # checkboxInput("plotOCD", "Plot OCD illness"),
+                                    selected = c("Anxiety")))
                ),
               mainPanel(
                 # Output for displaying the line chart of the selected variables
-                tags$div(style = "width:100%; height:100%;", plotOutput("plotIllness"))
+                plotOutput("plotIllness")
               )
              )
     )
@@ -187,11 +183,11 @@ server <- function(input, output) {
     })
     filtered_data_long <- filtered_data() %>% 
       select(Age, input$vars) %>% 
-      gather(key = "variable", value = "value", -Age)
+      gather(key = "Legend", value = "Computed Illness Degree", -Age)
     
     output$plotIllness <- renderPlot({
-      ggplot(filtered_data_long, aes(x = Age, y = value, color = variable)) +
-        geom_line(size = 2) + geom_point(size = 3) + stat_summary(fun.y = mean, geom = "line", aes(group = 1))
+      ggplot(filtered_data_long, aes(x = Age, y = `Computed Illness Degree`, color = Legend)) +
+        geom_line(size = 1.5) + geom_point(size = 2.5) + stat_summary(fun.y = mean, geom = "line", aes(group = 1))
     })
     
   })
