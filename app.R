@@ -30,10 +30,9 @@ df <- read_csv("data/mxmh_survey_results.csv")
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-  
   navbarPage("Music X Mental Health",
              id="tabs",
-             
+
     tabPanel("Correlations",
              pageWithSidebar(
                headerPanel("Relationships between two variables"),
@@ -52,7 +51,7 @@ ui <- fluidPage(
                )
              )
     ),
-    
+
     tabPanel("HeatMap",
              pageWithSidebar(
                headerPanel("Relationships between two variables"),
@@ -75,62 +74,58 @@ ui <- fluidPage(
                )
              )
     ),
-    
+
     tabPanel("LineChart",
              pageWithSidebar(
                headerPanel("Evolution of mental illnesses based on subject\'s age"),
                sidebarPanel(
-                 # numericInput("numOption", h3("Numeric input"), mix = 1, max = 4, value = 1),
-                 # conditionalPanel(
-                 #   condition = "input.check == false",
-                 #   # Input for selecting the two variables to compare
-                 #   selectInput(inputId = "var8", label = "Variable to aggregate 1", choices = names(df)[sapply(df, is.numeric)]),
-                 #   selectInput(inputId = "var9", label = "Variable to aggregate 2", choices = names(df)[sapply(df, is.numeric)]),
-                 #   selectInput(inputId = "var10", label = "Variable to aggregate 3", choices = names(df)[sapply(df, is.numeric)]),
-                 #   selectInput(inputId = "var11", label = "Variable to aggregate 4", choices = names(df)[sapply(df, is.numeric)]),
-                 # ),
+                 checkboxInput("plotAnxiety", "Plot Anxiety illness"),
+                 checkboxInput("plotDepression", "Plot Depression illness"),
+                 checkboxInput("plotInsomnia", "Plot Insomnia illness"),
+                 checkboxInput("plotOCD", "Plot OCD illness"),
                  actionButton("button3", "Submit")
                ),
-               mainPanel(
-                 # Output for displaying the line chart of the selected variables
-                 tags$div(style = "width:100%; height:100%;", plotlyOutput("plotIllness"))
-               )
+              mainPanel(
+                # Output for displaying the line chart of the selected variables
+                tags$div(style = "width:100%; height:100%;", plotlyOutput("plotIllness"))
+              )
              )
     )
   )
 )
 
+
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-  
+
   # Remove empty rows from the data frame
   print("Removing empty rows")
   df <- df[rowSums(is.na(df)) == 0,]
-  
+
   observeEvent(input$button1, {
     col1 <- df[, input$var1]
     col2 <- df[, input$var2]
-    
+
     print(is.numeric(as.data.frame(col1)[[1]]))
     print(is.numeric(as.data.frame(col2)[[1]]))
     print(class(as.data.frame(col1)[[1]]))
     print(class(as.data.frame(col2)[[1]]))
-    
-    
+
+
     if(!is.numeric(as.data.frame(col1)[[1]]) && is.numeric(as.data.frame(col2)[[1]])){
       print("Boxplot of col2 grouped by col1")
       output$corplot <- renderPlotly({
         boxplot(unlist(col2) ~ unlist(col1), xlab = input$var1, ylab = input$var2, main = paste("Boxplot of", input$var2, "grouped by", input$var1))
       })
     }
-    
+
     if(!is.numeric(as.data.frame(col2)[[1]]) && is.numeric(as.data.frame(col1)[[1]])){
       print("Boxplot of col1 grouped by col2")
       output$corplot <- renderPlotly({
         boxplot(unlist(col1) ~ unlist(col2), xlab = input$var2, ylab = input$var1, main = paste("Boxplot of", input$var1, "grouped by", input$var2))
       })
     }
-    
+
     if(is.numeric(as.data.frame(col1)[[1]]) && is.numeric(as.data.frame(col2)[[1]])){
       # Calculate the correlation between the selected variables
       print("Calculating correlation")
@@ -149,7 +144,7 @@ server <- function(input, output) {
       })
     }
   })
-  
+
   observeEvent(input$button2, {
     if(isTRUE(input$check)){
       df2 <- df %>% select("Fav genre", "Anxiety", "Depression", "Insomnia", "OCD")
@@ -174,7 +169,7 @@ server <- function(input, output) {
       })
     }
   })
-  
+
   observeEvent(input$button3, {
     df3 <- df %>%
       group_by(Age) %>%
@@ -182,26 +177,48 @@ server <- function(input, output) {
                 Depression = mean(Depression),
                 Insomnia = mean(Insomnia),
                 OCD = mean(OCD))
-    
     output$plotIllness <- renderPlotly({
       print("Line Chart mental illnesses vs age")
       plot_ly(df3, x = ~Age, y = ~Anxiety, name = "Anxiety",
               type = "scatter", mode = "lines+markers",
               line = list(width = 2, dash = "solid", color = "blue")) %>%
-        add_trace(x = ~Age, y = ~Depression, name = "Depression",
-                  type = "scatter", mode = "lines+markers",
-                  line = list(width = 2, dash = "solid", color = "red")) %>%
-        add_trace(x = ~Age, y = ~Insomnia, name = "Insomnia",
-                  type = "scatter", mode = "lines+markers",
-                  line = list(width = 2, dash = "solid", color = "yellow")) %>%
-        add_trace(x = ~Age, y = ~OCD, name = "OCD",
-                  type = "scatter", mode = "lines+markers",
-                  line = list(width = 2, dash = "solid", color = "green")) %>%
         layout(title = "Line Chart",
                xaxis = list(title = "Age"),
                yaxis = list(title = "Illness Mean Degree")
         )
     })
+    
+    if(isTRUE(input$plotAnxiety)){
+      
+    }
+
+    # df3 <- df %>%
+    #   group_by(Age) %>%
+    #   summarize(Anxiety = mean(Anxiety),
+    #             Depression = mean(Depression),
+    #             Insomnia = mean(Insomnia),
+    #             OCD = mean(OCD))
+    # 
+    # output$plotIllness <- renderPlotly({
+    #   print("Line Chart mental illnesses vs age")
+    #   plot_ly(df3, x = ~Age, y = ~Anxiety, name = "Anxiety",
+    #           type = "scatter", mode = "lines+markers",
+    #           line = list(width = 2, dash = "solid", color = "blue")) %>%
+    #     add_trace(x = ~Age, y = ~Depression, name = "Depression",
+    #               type = "scatter", mode = "lines+markers",
+    #               line = list(width = 2, dash = "solid", color = "red")) %>%
+    #     add_trace(x = ~Age, y = ~Insomnia, name = "Insomnia",
+    #               type = "scatter", mode = "lines+markers",
+    #               line = list(width = 2, dash = "solid", color = "yellow")) %>%
+    #     add_trace(x = ~Age, y = ~OCD, name = "OCD",
+    #               type = "scatter", mode = "lines+markers",
+    #               line = list(width = 2, dash = "solid", color = "green")) %>%
+    #     layout(title = "Line Chart",
+    #            xaxis = list(title = "Age"),
+    #            yaxis = list(title = "Illness Mean Degree")
+    #     )
+    # })
+    
   })
 }
 
