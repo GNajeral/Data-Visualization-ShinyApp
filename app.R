@@ -79,15 +79,17 @@ ui <- fluidPage(
              pageWithSidebar(
                headerPanel("Evolution of mental illnesses based on subject\'s age"),
                sidebarPanel(
-                 checkboxInput("plotAnxiety", "Plot Anxiety illness"),
-                 checkboxInput("plotDepression", "Plot Depression illness"),
-                 checkboxInput("plotInsomnia", "Plot Insomnia illness"),
-                 checkboxInput("plotOCD", "Plot OCD illness"),
-                 actionButton("button3", "Submit")
+                 checkboxGroupInput("vars", "Variables to include:",
+                                    c("Anxiety" = "Anxiety", "Depression" = "Depression", "Insomnia" = "Insomnia", "OCD" = "OCD"),
+                                    selected = c("Anxiety")),
+                 # checkboxInput("plotAnxiety", "Plot Anxiety illness"),
+                 # checkboxInput("plotDepression", "Plot Depression illness"),
+                 # checkboxInput("plotInsomnia", "Plot Insomnia illness"),
+                 # checkboxInput("plotOCD", "Plot OCD illness"),
                ),
               mainPanel(
                 # Output for displaying the line chart of the selected variables
-                tags$div(style = "width:100%; height:100%;", plotlyOutput("plotIllness"))
+                tags$div(style = "width:100%; height:100%;", plotOutput("plotIllness"))
               )
              )
     )
@@ -170,27 +172,46 @@ server <- function(input, output) {
     }
   })
 
-  observeEvent(input$button3, {
-    df3 <- df %>%
-      group_by(Age) %>%
-      summarize(Anxiety = mean(Anxiety),
-                Depression = mean(Depression),
-                Insomnia = mean(Insomnia),
-                OCD = mean(OCD))
-    output$plotIllness <- renderPlotly({
-      print("Line Chart mental illnesses vs age")
-      plot_ly(df3, x = ~Age, y = ~Anxiety, name = "Anxiety",
-              type = "scatter", mode = "lines+markers",
-              line = list(width = 2, dash = "solid", color = "blue")) %>%
-        layout(title = "Line Chart",
-               xaxis = list(title = "Age"),
-               yaxis = list(title = "Illness Mean Degree")
-        )
+    # Update the chart when the check box inputs change
+    observeEvent(input$vars, {
+      # Create a reactive function to filter the data
+      filtered_data <- reactive({
+        df[, c("Age", input$vars)]
+      })
+      # output$plotIllness <- renderPlotly({
+      #   ggplot(filtered_data(), aes_string(x = "Age", y = input$vars)) +
+      #     geom_line(aes_string(y=input$vars))
+      # })
+      output$plotIllness <- renderPlot({
+        plots <- list()
+        for (v in input$vars) {
+          plots[[v]] <- ggplot(filtered_data(), aes_string(x = "Age", y = v)) +
+            geom_line()
+        }
+        gridExtra::grid.arrange(grobs = plots)
+      })
     })
     
-    if(isTRUE(input$plotAnxiety)){
-      
-    }
+    # df3 <- df %>%
+    #   group_by(Age) %>%
+    #   summarize(Anxiety = mean(Anxiety),
+    #             Depression = mean(Depression),
+    #             Insomnia = mean(Insomnia),
+    #             OCD = mean(OCD))
+    # output$plotIllness <- renderPlotly({
+    #   print("Line Chart mental illnesses vs age")
+    #   plot_ly(df3, x = ~Age, y = ~Anxiety, name = "Anxiety",
+    #           type = "scatter", mode = "lines+markers",
+    #           line = list(width = 2, dash = "solid", color = "blue")) %>%
+    #     layout(title = "Line Chart",
+    #            xaxis = list(title = "Age"),
+    #            yaxis = list(title = "Illness Mean Degree")
+    #     )
+    # })
+    # 
+    # if(isTRUE(input$plotAnxiety)){
+    #   
+    # }
 
     # df3 <- df %>%
     #   group_by(Age) %>%
@@ -218,8 +239,6 @@ server <- function(input, output) {
     #            yaxis = list(title = "Illness Mean Degree")
     #     )
     # })
-    
-  })
 }
 
 # Run the application
