@@ -40,8 +40,8 @@ ui <- fluidPage(
                  tags$h3("Correlation between numeric variables"),
                  tags$h4("Choose the variables you wish to study"),
                  # Input for selecting the two variables to compare
-                 selectInput(inputId = "var1", label = "Variable 1", choices = names(df)),
-                 selectInput(inputId = "var2", label = "Variable 2", choices = names(df)),
+                 selectInput(inputId = "var1", label = "Variable 1", choices = names(df)[sapply(df, is.numeric)]),
+                 selectInput(inputId = "var2", label = "Variable 2", choices = names(df)[sapply(df, is.numeric)]),
                  actionButton("button1", "Submit")
                )),
                mainPanel(
@@ -56,7 +56,7 @@ ui <- fluidPage(
              pageWithSidebar(
                headerPanel("Relationships between two variables"),
                tags$div(style = "margin-top: 20px", sidebarPanel(
-                 checkboxInput("check", "Create Heatmap with favorite genre and different mental illnesses"),
+                 checkboxInput("check", "Create Heatmap with Favorite Genre and Different Mental Illnesses"),
                  conditionalPanel(
                    condition = "input.check == false",
                    # Input for selecting the two variables to compare
@@ -132,13 +132,13 @@ server <- function(input, output) {
       print("Correlation between col1 and col2")
       output$correlation <- renderText({
         # Return the value as a character string
-        return(paste("Correlation between", input$var1, "and", input$var2, ":", as.character(cor_val)))
+        return(paste("Correlation between", input$var2, "and", input$var1, ":", as.character(cor_val)))
       })
       output$corplot <- renderPlotly({
         print("Scatter plot of col1 vs col2")
-        ggplot(data = df, aes(x = unlist(col1), y = unlist(col2))) +
+        ggplot(data = df, aes(x = unlist(col2), y = unlist(col1))) +
           geom_point() +
-          labs(title = "Scatter plot of col1 vs col2", x = input$var1,  y = input$var2)
+          labs(title = "Scatter plot of col1 vs col2", x = input$var2,  y = input$var1)
       })
     }
   })
