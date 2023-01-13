@@ -174,22 +174,28 @@ server <- function(input, output) {
 
     # Update the chart when the check box inputs change
     observeEvent(input$vars, {
+      
+      df_summarised <- df %>%
+        group_by(Age) %>%
+        summarise(Anxiety = mean(Anxiety),
+                  Depression = mean(Depression),
+                  Insomnia = mean(Insomnia),
+                  OCD = mean(OCD))
+      
       # Create a reactive function to filter the data
       filtered_data <- reactive({
-        df[, c("Age", input$vars)]
+        df_summarised[, c("Age", input$vars)]
       })
-      # output$plotIllness <- renderPlotly({
-      #   ggplot(filtered_data(), aes_string(x = "Age", y = input$vars)) +
-      #     geom_line(aes_string(y=input$vars))
-      # })
+      
       output$plotIllness <- renderPlot({
         plots <- list()
         for (v in input$vars) {
           plots[[v]] <- ggplot(filtered_data(), aes_string(x = "Age", y = v)) +
-            geom_line()
+            geom_line() + stat_summary(fun.y = mean, geom = "line", aes(group = 1))
         }
         gridExtra::grid.arrange(grobs = plots)
       })
+      
     })
     
     # df3 <- df %>%
