@@ -172,79 +172,29 @@ server <- function(input, output) {
     }
   })
 
-    # Update the chart when the check box inputs change
-    observeEvent(input$vars, {
-      
-      df_summarised <- df %>%
-        group_by(Age) %>%
-        summarise(Anxiety = mean(Anxiety),
-                  Depression = mean(Depression),
-                  Insomnia = mean(Insomnia),
-                  OCD = mean(OCD))
-      
-      # Create a reactive function to filter the data
-      filtered_data <- reactive({
-        df_summarised[, c("Age", input$vars)]
-      })
-      
-      output$plotIllness <- renderPlot({
-        plots <- list()
-        for (v in input$vars) {
-          plots[[v]] <- ggplot(filtered_data(), aes_string(x = "Age", y = v)) +
-            geom_line() + stat_summary(fun.y = mean, geom = "line", aes(group = 1))
-        }
-        gridExtra::grid.arrange(grobs = plots)
-      })
-      
+  # Update the chart when the check box inputs change
+  observeEvent(input$vars, {
+    
+    df_mean <- df %>%
+      group_by(Age) %>%
+      summarise(Anxiety = mean(Anxiety),
+                Depression = mean(Depression),
+                Insomnia = mean(Insomnia),
+                OCD = mean(OCD))
+    
+    filtered_data <- reactive({
+      df_mean[, c("Age", input$vars)]
+    })
+    filtered_data_long <- filtered_data() %>% 
+      select(Age, input$vars) %>% 
+      gather(key = "variable", value = "value", -Age)
+    
+    output$plotIllness <- renderPlot({
+      ggplot(filtered_data_long, aes(x = Age, y = value, color = variable)) +
+        geom_line(size = 2) + geom_point(size = 3) + stat_summary(fun.y = mean, geom = "line", aes(group = 1))
     })
     
-    # df3 <- df %>%
-    #   group_by(Age) %>%
-    #   summarize(Anxiety = mean(Anxiety),
-    #             Depression = mean(Depression),
-    #             Insomnia = mean(Insomnia),
-    #             OCD = mean(OCD))
-    # output$plotIllness <- renderPlotly({
-    #   print("Line Chart mental illnesses vs age")
-    #   plot_ly(df3, x = ~Age, y = ~Anxiety, name = "Anxiety",
-    #           type = "scatter", mode = "lines+markers",
-    #           line = list(width = 2, dash = "solid", color = "blue")) %>%
-    #     layout(title = "Line Chart",
-    #            xaxis = list(title = "Age"),
-    #            yaxis = list(title = "Illness Mean Degree")
-    #     )
-    # })
-    # 
-    # if(isTRUE(input$plotAnxiety)){
-    #   
-    # }
-
-    # df3 <- df %>%
-    #   group_by(Age) %>%
-    #   summarize(Anxiety = mean(Anxiety),
-    #             Depression = mean(Depression),
-    #             Insomnia = mean(Insomnia),
-    #             OCD = mean(OCD))
-    # 
-    # output$plotIllness <- renderPlotly({
-    #   print("Line Chart mental illnesses vs age")
-    #   plot_ly(df3, x = ~Age, y = ~Anxiety, name = "Anxiety",
-    #           type = "scatter", mode = "lines+markers",
-    #           line = list(width = 2, dash = "solid", color = "blue")) %>%
-    #     add_trace(x = ~Age, y = ~Depression, name = "Depression",
-    #               type = "scatter", mode = "lines+markers",
-    #               line = list(width = 2, dash = "solid", color = "red")) %>%
-    #     add_trace(x = ~Age, y = ~Insomnia, name = "Insomnia",
-    #               type = "scatter", mode = "lines+markers",
-    #               line = list(width = 2, dash = "solid", color = "yellow")) %>%
-    #     add_trace(x = ~Age, y = ~OCD, name = "OCD",
-    #               type = "scatter", mode = "lines+markers",
-    #               line = list(width = 2, dash = "solid", color = "green")) %>%
-    #     layout(title = "Line Chart",
-    #            xaxis = list(title = "Age"),
-    #            yaxis = list(title = "Illness Mean Degree")
-    #     )
-    # })
+  })
 }
 
 # Run the application
